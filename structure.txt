@@ -3,7 +3,7 @@
 [username, email, phno, password]
 
 ###records.csv###
-[username, {monthyear : 
+[username, {month/year : 
 
                 {total : int, 
 
@@ -12,7 +12,8 @@
                 housing : int,
                 health : int,
                 leisure : int,
-                details : [{date : int, cat : cats[n], details : str}, ...........]
+                other : int
+                transacs : [{date : int, amt : int, cat : int, note : str}, ...........]
                 }
 
         }
