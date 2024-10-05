@@ -34,6 +34,7 @@ Please log in to your account or create a new account to get started.
 
 ### (1) **👤 Login with Existing User**
 ### (2) **🆕 Create a New User**
+### (3) **👋 Go back to Welcome Page**
 '''
 
 hometxt = '''
@@ -46,7 +47,7 @@ hometxt = '''
 ### Choose an Option:
 1. ➕ **Add a New Expense**
 2. 📜 **View All Expenses**
-3. 🔍 **Search for an Expense**
+3. 🔍 **Search for an Expense (Using note)**
 4. ❌ **Delete an Expense**
 5. 📊 **Generate Expense Report**
 6. 🚪 **Logout**
@@ -112,6 +113,13 @@ def cls():
     else:  # For MacOS and Linux
         os.system('clear')
 
+# Welcome Page
+def welcome():
+    cls()
+    console.print(Markdown(welcometxt))
+    input("\nPress Enter to continue to the login page...")
+    login()
+
 # Checking is user is registered
 def isRegistered(username):
     with open(dataFile, "r", newline = "") as file:
@@ -121,6 +129,7 @@ def isRegistered(username):
                 return True
     return False
 
+# FOrmats date to required format for storage
 def formatDate(date):
     day, month, year = date.split("/")
     
@@ -129,6 +138,7 @@ def formatDate(date):
     
     return f"{formatted_day}/{formatted_month}/{year}"
 
+# Saves data to CSV file
 def saveDataToCSV():
     global currentUser, currentData
     rows = []
@@ -150,6 +160,7 @@ def saveDataToCSV():
         wtr = csv.writer(file)
         wtr.writerows(rows)
 
+# Add a new expense
 def addExpense():
     cls()
     global currentUser, currentData
@@ -208,8 +219,7 @@ def addExpense():
 
     console.print(Panel("Expense added successfully!", title="Success!", style="bold green"))
     input("\nPress Enter to return to the homepage...")
-    return
-
+    return home()
 
 # Creating a new user account
 def createAccount():
@@ -228,7 +238,7 @@ def createAccount():
             console.print(Panel(f"Please Enter a valid 10 digit phone number...", 
                         title="Message!", style="bold red"))
             input("\nPress Enter to go back to login menu...")
-            login()
+            return login()
 
     # Check Empty Fields 
     if details["Username"] == "" or details["Email"] == "" or details["Password"] == "":
@@ -236,7 +246,7 @@ def createAccount():
         console.print(Panel(f"Some fields are left blank, please try again!", 
                         title="Message!", style="bold red"))
         input("\nPress Enter to go back to login menu...")
-        login()
+        return login()
 
     username = details["Username"]
 
@@ -246,7 +256,7 @@ def createAccount():
         console.print(Panel(f"User {username} already exists", 
                         title="Message!", style="bold red"))
         input("\nPress Enter to go back to login menu...")
-        login()
+        return login()
 
     # Confirm User Details
     final = Table(title="Expense Tracker", title_style="bold cyan")
@@ -263,7 +273,7 @@ def createAccount():
     console.print(final)
     res = input("\nRespond with (y) to confirm or (n) to cancel: ")
     if res.lower() != "y":
-        login()
+        return login()
 
     # Register user details to backend
     with open(dataFile, "a+", newline = "") as file:
@@ -279,7 +289,7 @@ def createAccount():
     console.print(Panel(f"User {username} successfully registered!", 
                         title="Message!", style="bold green"))
     input("\nPress Enter to go back to login menu...")
-    login()
+    return login()
 
 # User Login
 def login():
@@ -295,18 +305,20 @@ def login():
         console.print(Panel(f"Please enter a valid input!", 
                         title="Message!", style="bold red"))
         input("\nPress Enter to go back to login menu...")
-        login()
+        return login()
 
     if res == 1:
         pass
     elif res == 2:
         createAccount()
-        login()
+        return login()
+    elif res == 3:
+        return welcome()
     else:
         console.print(Panel(f"Please enter a valid input!", 
                         title="Message!", style="bold red"))
         input("\nPress Enter to go back to login menu...")
-        login()
+        return login()
 
     cls()
 
@@ -317,7 +329,7 @@ def login():
         console.print(Panel(f"Please enter a valid input!", 
                         title="Message!", style="bold red"))
         input("\nPress Enter to go back to login menu...")
-        login()
+        return login()
 
     # Checking if user is registered or not
     check = isRegistered(username)
@@ -325,7 +337,7 @@ def login():
         console.print(Panel(f"User {username} is not registered!", 
                         title="Message!", style="bold red"))
         input("\nPress Enter to go back to login menu...")
-        login()
+        return login()
     
     # Verifying login and redirecting to homepage
     cls()
@@ -336,29 +348,29 @@ def login():
         for row in rdr:
             if row[0] == username and row[3] == password:
                 currentUser = username
+                with open(recFile, "r", newline = "") as file:
+                    rdr = csv.reader(file)
+                    for row in rdr:
+                        if row[0] == username:
+                            currentData = ast.literal_eval(row[1])
+                            break
                 console.print(Panel(f"User {username} successfully logged in!", 
                         title="Message!", style="bold green"))
                 input("\nPress Enter to go to the homepage...")
-                continue
+                return home()
             
             elif row[0] == username and row[3] != password:
                 console.print(Panel(f"Incorrect password entered!", 
                         title="Message!", style="bold red"))
                 input("\nPress Enter to back to the login page again...")
-                login()
-    
-    with open(recFile, "r", newline = "") as file:
-        rdr = csv.reader(file)
-        for row in rdr:
-            if row[0] == username:
-                currentData = ast.literal_eval(row[1])
-                break
+                return login()
 
 def logout():
-    global currentUser
+    global currentUser, currentData
 
     currentUser = None
-    main()
+    currentData = {}
+    return main()
 
 # Homepage for the app
 def home():
@@ -370,26 +382,21 @@ def home():
     res = int(input("\nEnter your input : "))
 
     if res == 1:
-        addExpense()
+        return addExpense()
     elif res == 6:
-        logout()
+        return logout()
     else:
         cls()
         console.print(Panel(f"Invalid Input Entered...(Only 1 and 6 working for now)", 
                         title="Message!", style="bold red"))
         input("\nPress Enter to back to the home page again...")
-        home()
+        return home()
     
 # Parent Function of all Functions
 def main():
 
-    cls()
-    console.print(Markdown(welcometxt))
-    input("\nPress Enter to continue to the login page...")
+    welcome()
 
     login()
-    
-    #Continue to homepage after login
-    home()
 
 main()
