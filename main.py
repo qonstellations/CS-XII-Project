@@ -402,6 +402,187 @@ def searchExpense():
         input("\nPress Enter to go back to home page...")
         return home()
 
+# Delete Expense
+def deleteExpense():
+    cls()
+    global currentUser, currentData
+
+    try:
+        mmyy = str(input("Enter month for deletion (eg - 05/2025 for May 2025): "))
+        mmyy = formatDate("00/" + mmyy)[3:]
+        if mmyy not in currentData:
+            cls()
+            console.print(Panel("No records found for this month!", title="Message!", style="bold red"))
+            input("\nPress Enter to return to home page...")
+            return home()
+    except:
+        cls()
+        console.print(Panel("Please enter a valid input...", title="Message!", style="bold red"))
+        input("\nPress Enter to try again...")
+        return deleteExpense()
+
+    currentTransacs = currentData[mmyy]["transacs"]
+    if not currentTransacs:
+        cls()
+        console.print(Panel("No records to delete!", title="Message!", style="bold red"))
+        input("\nPress Enter to return to the homepage...")
+        return home()
+
+    table = Table(title=f"Delete Expense", title_style="bold cyan")
+    table.add_column("Index", style="cyan")
+    table.add_column("Date", style="magenta")
+    table.add_column("Amount (₹)", style="green")
+    table.add_column("Category", style="yellow")
+    table.add_column("Note", style="blue")
+
+    index = 1
+    for t in currentTransacs:
+        table.add_row(str(index), str(t["date"]), str(t["amt"]), formatCategory(t["category"]), str(t["note"] or ""))
+        index += 1
+
+    console.print(table)
+    try:
+        deleteIndex = int(input("Enter index of transaction to delete: ")) - 1
+        if deleteIndex < 0 or deleteIndex >= len(currentTransacs):
+            raise ValueError
+    except ValueError:
+        console.print(Panel("Please enter a valid input...", title="Message!", style="bold red"))
+        input("\nPress Enter to try again...")
+        return deleteExpense()
+
+    deleted = currentTransacs.pop(deleteIndex)
+    currentData[mmyy]["total"] -= deleted["amt"]
+    category_key = deleted["category"]
+    currentData[mmyy][category_key] -= deleted["amt"]
+    saveDataToCSV()
+
+    console.print(Panel("Expense deleted successfully!", title="Success!", style="bold green"))
+    input("\nPress Enter to return to the homepage...")
+    return home()
+
+def expenseReport():
+    cls()
+    global currentUser, currentData
+    console.print(Markdown("# 📊 Expense Report"))
+
+    try:
+        mmyy = str(input("\nEnter month/year for report (eg - 05/2025 for May 2025): "))
+        mmyy = formatDate("00/" + mmyy)[3:]
+        if mmyy not in currentData:
+            console.print(Panel("No records found for this month!", title="Message!", style="bold red"))
+            input("\nPress Enter to return to home page...")
+            return home()
+    except:
+        console.print(Panel("Please enter a valid input...", title="Message!", style="bold red"))
+        input("\nPress Enter to try again...")
+        return expenseReport()
+
+    total_expenses = currentData[mmyy]["total"]
+    categories = {
+        "Food & Dining": currentData[mmyy]["food"],
+        "Transport": currentData[mmyy]["transport"],
+        "Housing & Utilities": currentData[mmyy]["housing"],
+        "Health & Fitness": currentData[mmyy]["health"],
+        "Fun & Leisure": currentData[mmyy]["leisure"],
+        "Others": currentData[mmyy]["other"]
+    }
+
+    table3 = Table(title=f"Expense Report for {monthMap[int(mmyy[:2])]} {mmyy[3:]}", title_style="bold cyan")
+    table3.add_column("Category", style="bold green")
+    table3.add_column("Amount (₹)", style="yellow")
+
+    for category, amount in categories.items():
+        table3.add_row(category, str(amount))
+
+    table3.add_row("\nTotal", "\n" + str(total_expenses))
+
+    cls()
+    console.print(table3)
+
+    console.print(Panel("Would you like to generate a graphical report?", title="Message!", style="bold yellow"))
+    res4 = input("\nRespond with (y) to confirm or (n) to cancel: ")
+
+    while True:
+        cls()
+        if res4.lower() == "y":
+            console.print(Markdown("# Choose the representation format:"))
+            console.print(Markdown("1. 📊 Bar Chart\n2. 📈 Line Graph\n3. 🍰 Pie Chart"))
+            
+            try:
+                choice = int(input("\nEnter your choice : "))
+            except ValueError:
+                cls()
+                console.print(Panel("Invalid input! Please enter a number (1, 2, or 3).", title="Message!", style="bold red"))
+                return home()
+
+            if choice == 1:
+                plt.figure(figsize=(12, 6))
+                colors = ['#FF5733', '#33FF57', '#3357FF', '#FFC300', '#DAF7A6', '#FF33F6']
+                bars = plt.bar(list(categories.keys()), list(categories.values()), color=colors, width=0.4)
+
+                plt.xlabel("Categories", fontsize=14, fontweight='bold')
+                plt.ylabel("Amount (₹)", fontsize=14, fontweight='bold')
+                plt.title(f"Expense Report for {monthMap[int(mmyy[:2])]} {mmyy[3:]}", fontsize=16, fontweight='bold')
+                plt.xticks(rotation=15)
+                plt.yticks(fontsize=12)
+                plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+                for bar in bars:
+                    yval = bar.get_height()
+                    plt.text(bar.get_x() + bar.get_width()/2, yval + 5, int(yval), ha='center', va='bottom', fontsize=10)
+
+                plt.tight_layout()
+                plt.show()
+
+            elif choice == 2:
+                plt.figure(figsize=(12, 6))
+                plt.plot(list(categories.keys()), list(categories.values()), marker='o', linestyle='-', color='b')
+
+                plt.xlabel("Categories", fontsize=14, fontweight='bold')
+                plt.ylabel("Amount (₹)", fontsize=14, fontweight='bold')
+                plt.title(f"Expense Report for {monthMap[int(mmyy[:2])]} {mmyy[3:]}", fontsize=16, fontweight='bold')
+                plt.xticks(rotation=15)
+                plt.grid()
+
+                plt.tight_layout()
+                plt.show()
+
+            elif choice == 3:
+                plt.figure(figsize=(5, 5))
+
+                labelList = []
+                for thing in categories.keys():
+                    if categories[thing] != 0:
+                        labelList.append(thing)
+                
+                valueList = []
+                for item2 in categories.values():
+                    if item2 != 0:
+                        valueList.append(item2)
+
+                plt.pie(valueList, labels = labelList, autopct='%1.1f%%', startangle=140)
+
+                plt.title(f"Expense Distribution for {monthMap[int(mmyy[:2])]} {mmyy[3:]}", fontsize=16, fontweight='bold')
+                plt.axis('equal')
+
+                plt.tight_layout()
+                plt.show()
+
+            else:
+                console.print(Panel("Invalid choice! Please select 1, 2, or 3.", title="Message!", style="bold red"))
+
+            cls()
+            console.print(Markdown("# Please enter your choice - "))
+            console.print(Markdown("### Type 'y' to view data in another format"))
+            console.print(Markdown("### Type 'n' to exit to home page"))
+            response = input("\nEnter your choice : ")
+            if response.lower() != "y":
+                break
+        else:
+            return home()
+        
+    return home()
+
 # Creating a new user account
 def createAccount():
     cls()
@@ -570,6 +751,10 @@ def home():
             return viewExpense()
         elif res == 3:
             return searchExpense()
+        elif res == 4:
+            return deleteExpense()
+        elif res == 5:
+            return expenseReport()
         elif res == 6:
             return logout()
         else:
