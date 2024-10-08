@@ -18,3 +18,14 @@
 
         }
 ]
+
+###currentData###
+currentdata = {"currentMMYY" :
+               {"total" : 0, 
+                "food" : 0, "transport" : 0, "housing" : 0, 
+                "health" : 0, "leisure" : 0, "other" : 0,
+                "transacs" : []}
+                }
+
+###transac###
+newtransac = {"date": day, "amt" : cost, "category": category_key, "note": note}

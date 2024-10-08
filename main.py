@@ -47,12 +47,23 @@ hometxt = '''
 ### Choose an Option:
 1. ➕ **Add a New Expense**
 2. 📜 **View All Expenses**
-3. 🔍 **Search for an Expense (Using note)**
+3. 🔍 **Search for an Expense (Using note or date)**
 4. ❌ **Delete an Expense**
 5. 📊 **Generate Expense Report**
 6. 🚪 **Logout**
 
 ---
+'''
+
+searchtext = '''
+# Please select search type -
+
+**(1) Search by date 📅**
+
+**(2) Search by note 📝**
+
+**(3) Go back to Home Page 🏠**
+
 '''
 
 categories = '''
@@ -75,6 +86,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.markdown import Markdown
 from rich.panel import Panel
+from rich.progress import track
 from datetime import datetime
 
 currentDate = datetime.now()
@@ -91,10 +103,9 @@ defaultdata = {currentMMYY :
                 "transacs" : []}
                 }
 
-months = {"january": 1, "february": 2, "march": 3, "april": 4, "may": 5,
-          "june": 6, "july": 7, "august": 8, "september": 9, "october": 10,
-          "november": 11, "december": 12}
-
+monthMap = {1: "January", 2: "February", 3: "March", 4: "April", 
+          5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 
+          10: "October", 11: "November", 12: "December"}
 
 console = Console()
 
@@ -129,7 +140,7 @@ def isRegistered(username):
                 return True
     return False
 
-# FOrmats date to required format for storage
+# Formats date to required format for storage
 def formatDate(date):
     day, month, year = date.split("/")
     
@@ -137,6 +148,21 @@ def formatDate(date):
     formatted_month = f"{int(month):02}"
     
     return f"{formatted_day}/{formatted_month}/{year}"
+
+# Formats the category type from raw storage type to something fancier
+def formatCategory(cat):
+    if cat == "food":
+        return "🍕 Food & Dining"
+    elif cat == "transport":
+        return "🚗 Transport"
+    elif cat == "housing":
+        return "🏠 Housing & Utilities"
+    elif cat == "health":
+        return "🏋️ Health & Fitness"
+    elif cat == "leisure":
+        return "🎉 Fun & Leisure"
+    else:
+        return "🛠️ Others"
 
 # Saves data to CSV file
 def saveDataToCSV():
@@ -163,23 +189,21 @@ def saveDataToCSV():
 # Add a new expense
 def addExpense():
     cls()
-    global currentUser, currentData
+    global currentUser, currentData, monthMap
 
-    ddmmyy = formatDate(str(input("Enter date (eg - 25/05/2025 for 25 May 2025): ")))
     try:
+        ddmmyy = formatDate(str(input("Enter date (eg - 25/05/2025 for 25 May 2025): ")))
         day, month, year = map(int, ddmmyy.split("/"))
     except (ValueError, IndexError):
         console.print(Panel("Please enter a valid input...", title="Message!", style="bold red"))
         input("\nPress Enter to try again...")
-        addExpense()
-        return
+        return addExpense()
 
     if month < 1 or month > 12:
         console.print(Panel("Please enter a valid month (1-12)...", 
                             title="Message!", style="bold red"))
         input("\nPress Enter to try again...")
-        addExpense()
-        return
+        return addExpense()
     
     mmyy = str(ddmmyy[3:])
     
@@ -200,12 +224,16 @@ def addExpense():
 
     cls()
     console.print(Markdown(categories))
-    cat = int(input("Enter category number : "))
-    if cat < 1 or cat > 6:
+    try:
+        cat = int(input("Enter category number : "))
+        if cat < 1 or cat > 6:
+            console.print(Panel("Please enter a valid input...", title="Message!", style="bold red"))
+            input("\nPress Enter to try again...")
+            return addExpense()
+    except:
         console.print(Panel("Please enter a valid input...", title="Message!", style="bold red"))
         input("\nPress Enter to try again...")
-        addExpense()
-        return
+        return addExpense()
 
     category_key = ['food', 'transport', 'housing', 'health', 'leisure', 'other'][cat - 1]
     currentData[mmyy][category_key] += cost
@@ -220,6 +248,159 @@ def addExpense():
     console.print(Panel("Expense added successfully!", title="Success!", style="bold green"))
     input("\nPress Enter to return to the homepage...")
     return home()
+
+# View Expenses
+def viewExpense():
+    cls()
+    global currentUser, currentData
+
+    try:
+        mmyy = formatDate("00/"+str(input("Enter month to view expenses for (eg - 05/2025 for May 2025) : ")))[3:]
+        month, year = map(int, mmyy.split("/"))
+    except (ValueError, IndexError):
+        console.print(Panel("Please enter a valid input...", title="Message!", style="bold red"))
+        input("\nPress Enter to try again...")
+        return viewExpense()
+
+    if month < 1 or month > 12:
+        console.print(Panel("Please enter a valid month (1-12)...", 
+                            title="Message!", style="bold red"))
+        input("\nPress Enter to try again...")
+        return viewExpense()
+    
+    if mmyy not in currentData:
+        console.print(Panel("Records for this month do not exist!", title="Message!", style="bold red"))
+        input("\nPress Enter to go to home page...")
+        return home()
+    
+    currentTransacs = currentData[mmyy]["transacs"]
+    
+    table = Table(title=f"{monthMap[month]} {year} Detailed Summary", title_style="bold cyan")
+
+    table.add_column("Date", style="bold green", overflow="wrap")
+    table.add_column("Amount", style="yellow", overflow="wrap")
+    table.add_column("Category", style="yellow", overflow="wrap")
+    table.add_column("Note", style="purple", overflow="wrap")
+
+    for record in currentTransacs:
+        table.add_row(str(record["date"]), str(record["amt"]), 
+                        formatCategory(record["category"]), record["note"])
+    
+    console.print(table)
+    console.print(Panel(f"Would you like to view transactions from another month?", 
+                        title="Message!", style="bold yellow"))
+    res = input("\nRespond with (y) to confirm or (n) to cancel: ")
+    if res.lower() == "y":
+        return viewExpense()
+    else:
+        return home()
+
+# Search for an expense
+def searchExpense():
+    cls()
+    global currentUser, currentData
+
+    console.print(Markdown(searchtext))
+    ans = int(input("\nEnter your input: "))
+
+    if ans == 1:
+        cls()
+        try:
+            ddmmyy = formatDate(str(input("Enter date of expense (eg - 25/05/2025 for 25 May 2025) : ")))
+            date, month, year = map(int, ddmmyy.split("/"))
+        except (ValueError, IndexError):
+            console.print(Panel("Please enter a valid input...", title="Message!", style="bold red"))
+            input("\nPress Enter to try again...")
+            return searchExpense()
+
+        if month < 1 or month > 12:
+            console.print(Panel("Please enter a valid month (1-12)...", 
+                                title="Message!", style="bold red"))
+            input("\nPress Enter to try again...")
+            return searchExpense()
+        
+        if ddmmyy[3:] not in currentData:
+            console.print(Panel(f"No search results found for {ddmmyy}", title="Message!", style="bold red"))
+            input("\nPress Enter to go to home page...")
+            return home()
+        
+        currentTransacs = currentData[ddmmyy[3:]]["transacs"]
+        found = False
+
+        table = Table(title=f"Search Results for {ddmmyy}", title_style="bold cyan")
+
+        table.add_column("Date", style="bold green", overflow="wrap")
+        table.add_column("Amount", style="yellow", overflow="wrap")
+        table.add_column("Category", style="yellow", overflow="wrap")
+        table.add_column("Note", style="purple", overflow="wrap")
+
+        for record in currentTransacs:
+            if record["date"] == date:
+                table.add_row(formatDate(str(record["date"]) + "/" + ddmmyy[3:]), str(record["amt"]), 
+                        formatCategory(record["category"]), record["note"])
+                found = True
+        
+        if found:
+            console.print(table)
+            console.print(Panel(f"Would you like to search for another transaction?", 
+                        title="Message!", style="bold yellow"))
+            ans2 = input("\nRespond with (y) to confirm or (n) to cancel: ")
+            if ans2.lower() == "y":
+                return searchExpense()
+            else:
+                return home()
+        else:
+            console.print(Panel(f"No search results found for {ddmmyy}", title="Message!", style="bold red"))
+            input("\nPress Enter to go to home page...")
+            return home()
+    
+    elif ans == 2:
+        cls()
+        query = str(input("\nPlease enter search query : "))
+
+        cls()
+            
+        table2 = Table(title=f"Search Results for \"{query}\"", title_style="bold cyan")
+
+        table2.add_column("Date", style="bold green", overflow="wrap")
+        table2.add_column("Amount", style="yellow", overflow="wrap")
+        table2.add_column("Category", style="yellow", overflow="wrap")
+        table2.add_column("Note", style="purple", overflow="wrap")
+
+        found2 = False
+
+        for item2 in currentData:
+            transacs = currentData[item2]["transacs"]
+
+            for record2 in transacs:
+                if query in record2["note"]:
+                    table2.add_row(formatDate(str(record2["date"]) + "/" + item2), str(record2["amt"]), 
+                    formatCategory(record2["category"]), record2["note"])
+                    found2 = True
+
+        if found2:
+            console.print(table2)
+            console.print(Panel(f"Would you like to search for another transaction?", 
+                        title="Message!", style="bold yellow"))
+            ans3 = input("\nRespond with (y) to confirm or (n) to cancel: ")
+            if ans3.lower() == "y":
+                return searchExpense()
+            else:
+                return home()
+        else:
+            console.print(Panel(f"No search results found for {query}", title="Message!", style="bold red"))
+            input("\nPress Enter to try again...")
+            return searchExpense()
+
+    elif ans == 3:
+        return home()
+    
+    else:
+        cls()
+        console.print(Panel(f"Invalid Input!", 
+                        title="Message!", style="bold red"))
+        input("\nPress Enter to go back to home page...")
+        return home()
 
 # Creating a new user account
 def createAccount():
@@ -365,6 +546,7 @@ def login():
                 input("\nPress Enter to back to the login page again...")
                 return login()
 
+# User Logout
 def logout():
     global currentUser, currentData
 
@@ -379,13 +561,25 @@ def home():
 
     console.print(Markdown(hometxt))
 
-    res = int(input("\nEnter your input : "))
+    try:
+        res = int(input("\nEnter your input : "))
 
-    if res == 1:
-        return addExpense()
-    elif res == 6:
-        return logout()
-    else:
+        if res == 1:
+            return addExpense()
+        elif res == 2:
+            return viewExpense()
+        elif res == 3:
+            return searchExpense()
+        elif res == 6:
+            return logout()
+        else:
+            cls()
+            console.print(Panel(f"Invalid Input Entered...(Only 1, 2, 3, 6 working for now)", 
+                            title="Message!", style="bold red"))
+            input("\nPress Enter to back to the home page again...")
+            return home()
+    
+    except:
         cls()
         console.print(Panel(f"Invalid Input Entered...(Only 1 and 6 working for now)", 
                         title="Message!", style="bold red"))
