@@ -591,7 +591,6 @@ def createAccount():
 
     #Filling Values in dictionary from user input
     for key in details.keys():
-        cls()
         try:
             if key == "Phone Number" : details[key] = int(input(f"\nEnter {key} : "))
             else : details[key] = str(input(f"\nEnter {key} : "))
