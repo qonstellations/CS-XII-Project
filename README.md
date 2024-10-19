@@ -1,9 +1,5 @@
 # 💼 Expense Tracker - CBSE Grade XII Project
 
-## 📚 Project Overview
-
-Welcome to the **Expense Tracker**, a project built as part of my CBSE Grade XII Computer Science curriculum.
-
 ## 🔑 Key Features
 
 - **User-Friendly Interface**: Simple navigation with an intuitive menu system.
