@@ -36,3 +36,8 @@ This project was not just a fun exercise but also a significant learning experie
 ## 🚀 Conclusion
 
 Working on this Expense Tracker project has tremendously improved my Python skills, particularly in the areas of file handling, CSV manipulation, and data visualization. It was a fun and rewarding project that allowed me to apply my programming knowledge in a practical, real-world scenario.
+
+Considering the fact that I dedicated only 2 days for completing this project, it has a lot, i mean A LOT of bugs and tiny little imperfections.
+But, I'm happy with what I've managed to learn from this project.
+
+Thank You!
